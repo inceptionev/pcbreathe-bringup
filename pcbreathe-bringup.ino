@@ -8,6 +8,10 @@
 
 #include <SPI.h>
 #include <SD.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <Wire.h>
+
 
 //hardware definitions
 //PCB pins
@@ -23,6 +27,16 @@
 #define PIN_LED_Y PC14
 #define PIN_LED_G PC15
 const int chipSelect = PA15;  //SD card chip select
+
+//i2c test device definitions
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 32 // OLED display height, in pixels
+// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
+#define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
+//TwoWire myWire(PB8, PB9);
+//myWire.begin();
+//Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
 
 //test parameters
 #define BUZZER_VOL 3 //buzzer volume
@@ -46,7 +60,7 @@ SdVolume volume;
 SdFile root;
 
 //instantiate USART3
-HardwareSerial Serial3((int)PA3, (int)PA2);
+HardwareSerial Serial3(PB11,PB10);
 
 void setup() {
   // put your setup code here, to run once:
@@ -54,9 +68,9 @@ void setup() {
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
   Serial3.begin(9600);
-  while (!Serial) {
-    ; // wait for serial port to connect. Needed for native USB port only
-  }
+  //while (!Serial) {
+  //  ; // wait for serial port to connect. Needed for native USB port only
+  //}
 
   //set hw pin modes
   pinMode(LED_BUILTIN,OUTPUT);
@@ -201,7 +215,8 @@ void loop() {
   Serial.print(flow_exh);
   Serial.print("\t");
   Serial.println(vsense);
-
+  Serial.println(Serial3.read()); //prints the last character received from pi
+  
   //output the same thing to the Pi
   Serial3.print(pressure);
   Serial3.print("\t");
@@ -209,7 +224,9 @@ void loop() {
   Serial3.print("\t");
   Serial3.print(flow_exh);
   Serial3.print("\t");
-  Serial3.println(vsense);
+  Serial3.print(vsense);
+  Serial3.print("\t");
+  Serial3.println(Serial3.read()); //prints the last character received from pi
 
   delay(CYCLE_PERIOD);
 }
