@@ -10,6 +10,7 @@ for more test code with a state machine for running a ventilator setup in closed
 * Follow the instructions on the https://github.com/inceptionev/pcbreathe-bringup readme to get setup using STM32duino to program the nucleo.  Remember to switch JP5 to the U5V position.
 * Insert a FAT32-formatted micro SD card into the cycle controller SD card slot on the PCB.
 * Connect representative loads to the heater and solenoid switch outputs on the PCB.  Pick something like a solenoid that will respond visually or audibly)
+* To test i2c, connect a representative i2c device (the code is written for an [SSD1306 OLED display](https://www.amazon.com/gp/product/B07RKPSHRK)) to one or all of the i2c sensor ports.
 * Program the board.
 * Open the serial monitor and set it to 9600 baud (or whatever you've in the code below)
 * Press reset to run the SD card test at the beginning, followed by the hardware cycling test
@@ -20,12 +21,14 @@ for more test code with a state machine for running a ventilator setup in closed
     * The blower will turn on and cycle between the two power levels set at the top of the code.
     * The loads you plugged in will alternate activating 
     * The serial console will stream the three pressure sensor readings of the dP sensors, the vsense, and the last chactacter received from Rpi via the UART connection - in the order of patient pressure, inhalation, exhalation, vsense, Rpi character.
+    * If you have i2c oled displays hooked up, they will also display this data, along with their port number.  (note that you cannot pull out the OLED display and move it between ports while the program is live to test all the ports.  To do this you must reset the STM32 each time so that the display initializes correctly)
     * Gently press your finger over the positive port of each of the dP sensors and you should see each reading go up slightly in turn.
     * The expected value for vsense is about 814 for 12.0V input (expect 780-850 for 11.5-12.5V)
-    * Open up a serial terminal on the Rpi such as minicom (you may have to disable serial console and enable serial port in Rpi Config)
+    * If you have an Rpi connected, open up a serial terminal on the Rpi such as minicom (you may have to disable serial console and enable serial port in Rpi Config)
     * Set the terminal to 9600 8N1, no flow control.
     * Observe that you see the same data here (3x dP readings, vsense, last char received)
     * Hold down a key on the Pi to transmit characters and see that the last char received echoes it back.
+    
 
 ## STM32duino setup
 To use this code, you will need to setup the Arduino IDE to talk to STM32.  Use this link for instructions: [http://www.emcu.eu/2017/03/13/how-to-use-stm32-and-arduino-ide/](http://www.emcu.eu/2017/03/13/how-to-use-stm32-and-arduino-ide/)
