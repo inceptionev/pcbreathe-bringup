@@ -50,8 +50,11 @@ void loop() {
       digitalWrite(PIN_LED_R, HIGH);
       digitalWrite(PIN_LED_Y, HIGH);
       digitalWrite(PIN_LED_G, LOW);
+      digitalWrite(PIN_SOLENOID, HIGH);
+      digitalWrite(PIN_HEATER, LOW);
       analogWrite(PIN_BUZZER, BUZZER_VOL);
       analogWrite(PIN_BLOWER, BLOWER_HIGH);
+      
       state = 1;
       break;
 
@@ -60,8 +63,11 @@ void loop() {
       digitalWrite(PIN_LED_R, LOW);
       digitalWrite(PIN_LED_Y, LOW);
       digitalWrite(PIN_LED_G, HIGH);
+      digitalWrite(PIN_SOLENOID, LOW);
+      digitalWrite(PIN_HEATER, HIGH);
       analogWrite(PIN_BUZZER, 0);
       analogWrite(PIN_BLOWER, BLOWER_LOW);
+      
       state = 0;
       break;
 
