@@ -37,10 +37,10 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);  //ins
 
 
 //test parameters
-#define BUZZER_VOL 3 //buzzer volume
-#define CYCLE_PERIOD 200 //actuation cycle timing in ms
-#define BLOWER_HIGH 100 //blower high throttle command
-#define BLOWER_LOW 50 //blower low throttle command
+#define BUZZER_VOL 5 //buzzer volume
+#define CYCLE_PERIOD 1000 //actuation cycle timing in ms
+#define BLOWER_HIGH 150 //blower high throttle command
+#define BLOWER_LOW 100 //blower low throttle command
 
 //create state machine variables
 int pressure = 0;
@@ -81,6 +81,7 @@ void setup() {
   pinMode(PIN_HEATER,OUTPUT);
 
   //Setup display (i2c test)
+  Wire.begin();
   for (int k=0;k<4;k++) {
     Wire.beginTransmission(0x70); //address the i2c switch
     Wire.write(4+k); //select i2c port, base address 4, cycle thru 5-7
@@ -103,7 +104,6 @@ void setup() {
     Serial.println("* is a card inserted?");
     Serial.println("* is your wiring correct?");
     Serial.println("* did you change the chipSelect pin to match your shield or module?");
-    while (1);
   } else {
     Serial.println("Wiring is correct and a card is present.");
   }
@@ -128,7 +128,6 @@ void setup() {
   // Now we will try to open the 'volume'/'partition' - it should be FAT16 or FAT32
   if (!volume.init(card)) {
     Serial.println("Could not find FAT16/FAT32 partition.\nMake sure you've formatted the card");
-    while (1);
   }
 
   Serial.print("Clusters:          ");
