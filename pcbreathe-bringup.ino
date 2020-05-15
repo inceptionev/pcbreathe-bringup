@@ -1,7 +1,36 @@
 //bringup test code for RespiraWorks Ventilator Mainboard Rev 1.0
 //use STM32duino and select appropriate board and COM port and use SWD programming
 //analog outputs can be plotted use Arduino Serial Plotter
+//
+//## HOW TO USE THIS TEST:
+//* Follow the instructions on the https://github.com/RespiraWorks/pcbreathe readme if you need
+//help getting the hardware set up, where to plug things in, etc.
+//* Follow the instructions on the https://github.com/inceptionev/pcbreathe-bringup readme
+//to get setup using STM32duino to program the nucleo.  Remember to switch JP5 to the U5V position.
+//* Insert a FAT32-formatted micro SD card into the cycle controller SD card slot on the PCB.
+//* Connect representative loads to the heater and solenoid switch outputs on the PCB.  Pick 
+//something like a solenoid that will respond visually or audibly)
+//* Program the board.
+//* Open the serial monitor and set it to 9600 baud (or whatever you've in the code below)
+//* Press reset to run the SD card test at the beginning, followed by the hardware cycling test
+//* The following hehaviors are expected on a functioning board:
+//    * Red light on the bottom blinks (Green and Yellow LEDs do not work on Rev 1.0 due to a pin conflict)
+//    * Buzzer will beep softly on every cycle.  If you can't hear it over whatever loads (blower, solenoid)
+//you have connected, increase the volume in the definds below.
+//    * The blower will turn on and cycle between the two power levels set below.
+//    * The loads you plugged in wil alternate activating 
+//    * The serial console will stream the three pressure sensor readings of the dP sensors and the vsense.
+//Use a syringe or other pressure source to (gently!) provide pressure to the positive (upper) port of the dP sensors.
+//You should see each go up in turn.
+//    * The expected value for vsense is about 814 for 12.0V input (expect 780-850 for 11.5-12.5V)
 
+
+
+#include <SPI.h>
+#include <SD.h>
+
+//hardware definitions
+//PCB pins
 #define PIN_PRES PA1
 #define PIN_INH PA4
 #define PIN_EXH PB0
@@ -13,6 +42,7 @@
 #define PIN_LED_R PC13
 #define PIN_LED_Y PC14
 #define PIN_LED_G PC15
+const int chipSelect = PA15;  //SD card chip select
 
 //test parameters
 #define BUZZER_VOL 3 //buzzer volume
@@ -20,6 +50,7 @@
 #define BLOWER_HIGH 100 //blower high throttle command
 #define BLOWER_LOW 50 //blower low throttle command
 
+//create state machine variables
 int pressure = 0;
 int flow_inh = 0;
 int flow_exh = 0;
@@ -29,9 +60,21 @@ int exh_flow = 0;
 int state = 0;
 unsigned int now = 0;
 
+//create objects for SD card test
+Sd2Card card;
+SdVolume volume;
+SdFile root;
+
 void setup() {
   // put your setup code here, to run once:
+  
+  // Open serial communications and wait for port to open:
   Serial.begin(9600);
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for native USB port only
+  }
+
+  //set hw pin modes
   pinMode(LED_BUILTIN,OUTPUT);
   pinMode(PIN_LED_R,OUTPUT);
   pinMode(PIN_LED_Y,OUTPUT);
@@ -40,10 +83,84 @@ void setup() {
   pinMode(PIN_BLOWER,OUTPUT);
   pinMode(PIN_SOLENOID,OUTPUT);
   pinMode(PIN_HEATER,OUTPUT);
+
+
+  //TEST: SD CARD
+  Serial.print("\nInitializing SD card...");
+
+  // we'll use the initialization code from the utility libraries
+  // since we're just testing if the card is working!
+  if (!card.init(SPI_HALF_SPEED, chipSelect)) {
+    Serial.println("initialization failed. Things to check:");
+    Serial.println("* is a card inserted?");
+    Serial.println("* is your wiring correct?");
+    Serial.println("* did you change the chipSelect pin to match your shield or module?");
+    while (1);
+  } else {
+    Serial.println("Wiring is correct and a card is present.");
+  }
+
+  // print the type of card
+  Serial.println();
+  Serial.print("Card type:         ");
+  switch (card.type()) {
+    case SD_CARD_TYPE_SD1:
+      Serial.println("SD1");
+      break;
+    case SD_CARD_TYPE_SD2:
+      Serial.println("SD2");
+      break;
+    case SD_CARD_TYPE_SDHC:
+      Serial.println("SDHC");
+      break;
+    default:
+      Serial.println("Unknown");
+  }
+
+  // Now we will try to open the 'volume'/'partition' - it should be FAT16 or FAT32
+  if (!volume.init(card)) {
+    Serial.println("Could not find FAT16/FAT32 partition.\nMake sure you've formatted the card");
+    while (1);
+  }
+
+  Serial.print("Clusters:          ");
+  Serial.println(volume.clusterCount());
+  Serial.print("Blocks x Cluster:  ");
+  Serial.println(volume.blocksPerCluster());
+
+  Serial.print("Total Blocks:      ");
+  Serial.println(volume.blocksPerCluster() * volume.clusterCount());
+  Serial.println();
+
+  // print the type and size of the first FAT-type volume
+  uint32_t volumesize;
+  Serial.print("Volume type is:    FAT");
+  Serial.println(volume.fatType(), DEC);
+
+  volumesize = volume.blocksPerCluster();    // clusters are collections of blocks
+  volumesize *= volume.clusterCount();       // we'll have a lot of clusters
+  volumesize /= 2;                           // SD card blocks are always 512 bytes (2 blocks are 1KB)
+  Serial.print("Volume size (Kb):  ");
+  Serial.println(volumesize);
+  Serial.print("Volume size (Mb):  ");
+  volumesize /= 1024;
+  Serial.println(volumesize);
+  Serial.print("Volume size (Gb):  ");
+  Serial.println((float)volumesize / 1024.0);
+
+  Serial.println("\nFiles found on the card (name, date and size in bytes): ");
+  root.openRoot(volume);
+
+  // list all files in the card with date and size
+  root.ls(LS_R | LS_DATE | LS_SIZE);
+
+
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
+
+  //TEST: Blower control, buzzer, LEDs, heater switch, solenoid switch
   switch(state) {
     case 0:
       digitalWrite(LED_BUILTIN,HIGH);
