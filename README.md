@@ -19,7 +19,8 @@ for more test code with a state machine for running a ventilator setup in closed
     * Buzzer will beep softly on every cycle.  If you can't hear it over whatever loads (blower, solenoid)/you have connected, increase the volume in the defines below.
     * The blower will turn on and cycle between the two power levels set below.
     * The loads you plugged in wil alternate activating 
-    * The serial console will stream the three pressure sensor readings of the dP sensors and the vsense. Use a syringe or other pressure source to (gently!) provide pressure to the positive (upper) port of the dP sensors. You should see each go up in turn.
+    * The serial console will stream the three pressure sensor readings of the dP sensors and the vsense in the order of patient pressure, inhalation, exhalation, vsense. 
+    * Gently press your finger over the positive port of each of the dP sensors and you should see each reading go up slightly in turn.
     * The expected value for vsense is about 814 for 12.0V input (expect 780-850 for 11.5-12.5V)
 
 ## STM32duino setup
