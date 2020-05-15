@@ -5,7 +5,7 @@ make sure to check the pcbreathe repo for quick start quide and board hardware e
 
 for more test code with a state machine for running a ventilator setup in closed-loop control mode, see: [https://github.com/inceptionev/FMLtest](https://github.com/inceptionev/FMLtest)
 
-## HOW TO USE THIS TEST:
+## How to use this test:
 * Follow the instructions on the https://github.com/RespiraWorks/pcbreathe readme if you need help getting the hardware set up, where to plug things in, etc.
 * Follow the instructions on the https://github.com/inceptionev/pcbreathe-bringup readme to get setup using STM32duino to program the nucleo.  Remember to switch JP5 to the U5V position.
 * Insert a FAT32-formatted micro SD card into the cycle controller SD card slot on the PCB.
@@ -22,12 +22,12 @@ for more test code with a state machine for running a ventilator setup in closed
     * The serial console will stream the three pressure sensor readings of the dP sensors and the vsense. Use a syringe or other pressure source to (gently!) provide pressure to the positive (upper) port of the dP sensors. You should see each go up in turn.
     * The expected value for vsense is about 814 for 12.0V input (expect 780-850 for 11.5-12.5V)
 
-# STM32duino setup
+## STM32duino setup
 To use this code, you will need to setup the Arduino IDE to talk to STM32.  Use this link for instructions: [http://www.emcu.eu/2017/03/13/how-to-use-stm32-and-arduino-ide/](http://www.emcu.eu/2017/03/13/how-to-use-stm32-and-arduino-ide/)
 
 note: You may have better luck using the SWD update mode than that of Mass Storage.
 
-# Getting data out
+## Getting data out
 The code outputs data on the serial port attached to the ST-LINK USB serial port emulator interface at 9600 baud.
 
 The code has the ability to output in either Arduino Plotter format or Cypress Bridge Control Panel formal, just uncomment the correspoinding lines of code at the bottom of the sketch.
