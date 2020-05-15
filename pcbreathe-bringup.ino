@@ -3,27 +3,7 @@
 //analog outputs can be plotted use Arduino Serial Plotter
 //
 //## HOW TO USE THIS TEST:
-//* Follow the instructions on the https://github.com/RespiraWorks/pcbreathe readme if you need
-//help getting the hardware set up, where to plug things in, etc.
 //* Follow the instructions on the https://github.com/inceptionev/pcbreathe-bringup readme
-//to get setup using STM32duino to program the nucleo.  Remember to switch JP5 to the U5V position.
-//* Insert a FAT32-formatted micro SD card into the cycle controller SD card slot on the PCB.
-//* Connect representative loads to the heater and solenoid switch outputs on the PCB.  Pick 
-//something like a solenoid that will respond visually or audibly)
-//* Program the board.
-//* Open the serial monitor and set it to 9600 baud (or whatever you've in the code below)
-//* Press reset to run the SD card test at the beginning, followed by the hardware cycling test
-//* The following hehaviors are expected on a functioning board:
-//    * Red light on the bottom blinks (Green and Yellow LEDs do not work on Rev 1.0 due to a pin conflict)
-//    * Buzzer will beep softly on every cycle.  If you can't hear it over whatever loads (blower, solenoid)
-//you have connected, increase the volume in the definds below.
-//    * The blower will turn on and cycle between the two power levels set below.
-//    * The loads you plugged in wil alternate activating 
-//    * The serial console will stream the three pressure sensor readings of the dP sensors and the vsense.
-//Use a syringe or other pressure source to (gently!) provide pressure to the positive (upper) port of the dP sensors.
-//You should see each go up in turn.
-//    * The expected value for vsense is about 814 for 12.0V input (expect 780-850 for 11.5-12.5V)
-
 
 
 #include <SPI.h>
