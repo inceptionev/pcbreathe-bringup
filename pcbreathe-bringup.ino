@@ -33,9 +33,7 @@ const int chipSelect = PA15;  //SD card chip select
 #define SCREEN_HEIGHT 32 // OLED display height, in pixels
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
-//TwoWire myWire(PB8, PB9);
-//myWire.begin();
-//Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);  //instantiate display
 
 
 //test parameters
@@ -81,6 +79,18 @@ void setup() {
   pinMode(PIN_BLOWER,OUTPUT);
   pinMode(PIN_SOLENOID,OUTPUT);
   pinMode(PIN_HEATER,OUTPUT);
+
+  //Setup display (i2c test)
+  for (int k=0;k<4;k++) {
+    Wire.beginTransmission(0x70); //address the i2c switch
+    Wire.write(4+k); //select i2c port, base address 4, cycle thru 5-7
+    Wire.endTransmission(); //send and stop
+    display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+    display.setTextSize(1);      // Normal 1:1 pixel scale
+    display.setTextColor(SSD1306_WHITE); // Draw white text
+    display.setCursor(0, 0);     // Start at top-left corner
+    display.cp437(true);         // Use full 256 char 'Code Page 437' font
+  }
 
 
   //TEST: SD CARD
@@ -215,7 +225,8 @@ void loop() {
   Serial.print(flow_exh);
   Serial.print("\t");
   Serial.println(vsense);
-  Serial.println(Serial3.read()); //prints the last character received from pi
+  Serial.write(Serial3.read()); //prints the last character received from pi
+  Serial.print("\r\n");
   
   //output the same thing to the Pi
   Serial3.print(pressure);
@@ -226,7 +237,32 @@ void loop() {
   Serial3.print("\t");
   Serial3.print(vsense);
   Serial3.print("\t");
-  Serial3.println(Serial3.read()); //prints the last character received from pi
+  Serial3.write(Serial3.read()); //prints the last character received from pi
+  Serial3.print("\r\n");
+
+  //Print to display using the i2c switch
+  for (int k=0;k<4;k++) {
+    Wire.beginTransmission(0x70); //address the i2c switch
+    Wire.write(4+k); //select i2c port, base address 4, cycle thru 5-7
+    Wire.endTransmission(); //send and stop
+    display.setCursor(0, 0);     // Start at top-left corner
+    display.clearDisplay();
+    display.print(F("Port "));
+    display.println(k);
+    display.println(" ");
+    display.print(pressure);
+    display.print(" ");
+    display.print(flow_inh);
+    display.print(" ");
+    display.print(flow_exh);
+    display.print(" ");
+    display.print(vsense);
+    display.print(" ");
+    display.write(Serial3.read()); //prints the last character received from pi
+    display.display(); //send the buffer
+  }
+  
+  
 
   delay(CYCLE_PERIOD);
 }
