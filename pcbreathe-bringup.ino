@@ -45,11 +45,15 @@ Sd2Card card;
 SdVolume volume;
 SdFile root;
 
+//instantiate USART3
+HardwareSerial Serial3((int)PA3, (int)PA2);
+
 void setup() {
   // put your setup code here, to run once:
   
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
+  Serial3.begin(9600);
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
   }
@@ -197,5 +201,15 @@ void loop() {
   Serial.print(flow_exh);
   Serial.print("\t");
   Serial.println(vsense);
+
+  //output the same thing to the Pi
+  Serial3.print(pressure);
+  Serial3.print("\t");
+  Serial3.print(flow_inh);
+  Serial3.print("\t");
+  Serial3.print(flow_exh);
+  Serial3.print("\t");
+  Serial3.println(vsense);
+
   delay(CYCLE_PERIOD);
 }
