@@ -7,7 +7,7 @@ for more test code with a state machine for running a ventilator setup in closed
 
 ## How to use this test:
 * Follow the instructions on the https://github.com/RespiraWorks/pcbreathe readme if you need help getting the hardware set up, where to plug things in, etc.
-* Follow the instructions below under the STM32duino setup section to get program the Nucleo.  Remember to switch JP5 to the U5V position.
+* Follow the instructions below under the STM32duino setup section to get program the Nucleo.  Remember to switch JP5 to the E5V position.
 * Insert a FAT32-formatted micro SD card into the cycle controller SD card slot on the PCB.
 * Connect representative loads to the heater and solenoid switch outputs on the PCB.  Pick something like a solenoid that will respond visually or audibly)
 * To test i2c, connect a representative i2c device (the code is written for an [SSD1306 OLED display](https://www.amazon.com/gp/product/B07RKPSHRK)) to one or all of the i2c sensor ports.
@@ -32,7 +32,7 @@ for more test code with a state machine for running a ventilator setup in closed
 
 ## STM32duino setup
 * To use this code, you will need to setup the Arduino IDE to talk to STM32.  Use this link for instructions: [http://www.emcu.eu/2017/03/13/how-to-use-stm32-and-arduino-ide/](http://www.emcu.eu/2017/03/13/how-to-use-stm32-and-arduino-ide/)
-* note: You may have better luck using the SWD update mode than that of Mass Storage.
+* note: You may have better luck using the SWD update mode than that of Mass Storage.  However, to use the SWD mode you will need to download and install the [STM32CubeProgrammer](https://www.st.com/content/st_com/en/products/development-tools/software-development-tools/stm32-software-development-tools/stm32-programmers/stm32cubeprog.html#overview)
 * To program this board, you will need to go to Tools... and select the following
     * Board: Nucleo-64
     * Board part number: L452RE
