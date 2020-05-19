@@ -3,7 +3,7 @@ bringup code for RespiraWorks Ventilator Mainboard Rev 1.0
 
 make sure to check the pcbreathe repo for quick start quide and board hardware errata: [https://github.com/RespiraWorks/pcbreathe](https://github.com/RespiraWorks/pcbreathe)
 
-for more test code with a state machine for running a ventilator setup in closed-loop control mode, see: [https://github.com/inceptionev/FMLtest](https://github.com/inceptionev/FMLtest)
+for unofficial (proceed at your own risk!) test code with a state machine for running a ventilator setup in closed-loop control mode, see: [https://github.com/inceptionev/FMLtest](https://github.com/inceptionev/FMLtest)
 
 Quick notes:
 * If you want to use this for capturing serial data out, you may need to comment or uncomment some of the sections at the bottom of the code for Cypress or Arduino serial formatting.  It indicates in code which blocks apply.  
