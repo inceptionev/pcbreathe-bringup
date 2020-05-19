@@ -5,6 +5,11 @@ make sure to check the pcbreathe repo for quick start quide and board hardware e
 
 for more test code with a state machine for running a ventilator setup in closed-loop control mode, see: [https://github.com/inceptionev/FMLtest](https://github.com/inceptionev/FMLtest)
 
+Quick notes:
+* If you want to use this for capturing serial data out, you may need to comment or uncomment some of the sections at the bottom of the code for Cypress or Arduino serial formatting.  It indicates in code which blocks apply.  
+* Also, the i2c display block (also labeled) slows down the cycle rate quite a bit, so comment out that block too if you want to speed it up.  
+* You will need to install some dependencies to use the code, which is also documented in the readme on git, in the section titled "STM32duino setup".  
+
 ## How to use this test:
 * Follow the instructions on the https://github.com/RespiraWorks/pcbreathe readme if you need help getting the hardware set up, where to plug things in, etc.
 * Follow the instructions below under the STM32duino setup section to get program the Nucleo.  Remember to switch JP5 to the E5V position.
