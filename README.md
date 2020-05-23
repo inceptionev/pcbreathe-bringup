@@ -8,6 +8,7 @@ for unofficial (proceed at your own risk!) test code with a state machine for ru
 Quick notes:
 * If you want to use this for capturing serial data out, you may need to comment or uncomment some of the sections at the bottom of the code for Cypress or Arduino serial formatting.  It indicates in code which blocks apply.  
 * Also, the i2c display block (also labeled) slows down the cycle rate quite a bit, so comment out that block too if you want to speed it up.  
+* If the stepper motor driver is not installed or not powered, this code will also not run.  Either power the board (instructions here: https://github.com/RespiraWorks/pcbreathe) or comment out any reference to the stepper motors.
 * You will need to install some dependencies to use the code, which is also documented in the readme on git, in the section titled "STM32duino setup".  
 
 ## How to use this test:
