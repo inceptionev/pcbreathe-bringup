@@ -47,7 +47,7 @@ Quick notes:
 * Further dependencies.  You will also need to install the following packages to run this code (install by going to Tools...Manage Libraries... in your Arduino IDE and seaching for the below):
   * Adafruit SDD1306
   * Adafruit GFX
-
+  * [powerSTEP01 arduino library](https://github.com/Megunolink/powerSTEP01_Arduino_Library) (may require manual install: follow the directions in the readme of the library.) 
 
 
 ## Getting data out
