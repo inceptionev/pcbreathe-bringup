@@ -3,7 +3,16 @@
 //analog outputs can be plotted use Arduino Serial Plotter
 //
 //## HOW TO USE THIS TEST:
-//* Follow the instructions on the https://github.com/inceptionev/pcbreathe-bringup readme
+//* Follow the instructions on the https://github.com/inceptionev/pcbreathe-bringup readme to set up the hardware and the IDE.
+//* This version is coded without wait states to work with any combination of peripherals.
+//* However, this means that the cycle time may vary depending on what peripherals are populated.  Comment out parts as needed if they are slowing things down.
+//    * At minimum the STM32 Nucleo is required.  It will just blink the LED and output to USB serial.
+//    * With the PCB added, it will beep the buzzer and flash the RED LED on the backside of the PCB.
+//    * With the uSD card plugged in, it will run read info from the SD card and publish to USB serial.
+//    * Alternates actuating the heater and solenoid
+//    * Drives i2c SSD1306 display on any of the 4 PCB ports for i2c testing
+//    * One or two X-NUCLEO-IHM03A1 stepper driver modules, values in this code are selected for driving Marc-designed pinch valves, but will just spin any stepper motor for testing.  Look up the X-NUCLEO-IHM03A1 user guide to configure the hardware for stacking.  You'll have to solder some resistors.
+//    * With the Rpi populated, it will send sensor data to the Rpi over serial and echo back the last character received from the Rpi UART.
 
 
 #include <SPI.h>
@@ -37,7 +46,7 @@ const int chipSelect = PA15;  //SD card chip select
 //Pinch valve motion settings
 #define STARTSTROKE 7000
 #define OPENPOS 200
-#define CLOSEDPOS 6800
+#define CLOSEDPOS 6700
 
 //i2c test device definitions
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -47,7 +56,8 @@ const int chipSelect = PA15;  //SD card chip select
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);  //instantiate display
 
 //instantiate stepper driver
-powerSTEP driver(0, nCS_PIN, nSTBY_nRESET_PIN);
+powerSTEP driverINH(0, nCS_PIN, nSTBY_nRESET_PIN);
+powerSTEP driverEXH(1, nCS_PIN, nSTBY_nRESET_PIN);
 
 //test parameters
 #define BUZZER_VOL 5 //buzzer volume
@@ -84,7 +94,6 @@ void setup() {
   //}
 
   //set hw pin modes
-  pinMode(LED_BUILTIN,OUTPUT);
   pinMode(PIN_LED_R,OUTPUT);
   pinMode(PIN_LED_Y,OUTPUT);
   pinMode(PIN_LED_G,OUTPUT);
@@ -110,67 +119,88 @@ void setup() {
   SPI.setDataMode(SPI_MODE3);
 
   // Configure powerSTEP
-  driver.SPIPortConnect(&SPI); // give library the SPI port
+  driverEXH.SPIPortConnect(&SPI); // give library the SPI port
+  driverINH.SPIPortConnect(&SPI); // give library the SPI port
   
-  driver.configSyncPin(BUSY_PIN, 0); // use SYNC/nBUSY pin as nBUSY, 
+  driverEXH.configSyncPin(BUSY_PIN, 0);
+  driverINH.configSyncPin(BUSY_PIN, 0); // use SYNC/nBUSY pin as nBUSY, 
                                      // thus syncSteps (2nd paramater) does nothing
                                      
-  driver.configStepMode(STEP_FS_128); // 1/128 microstepping, full steps = STEP_FS,
+  driverEXH.configStepMode(STEP_FS_128);
+  driverINH.configStepMode(STEP_FS_128); // 1/128 microstepping, full steps = STEP_FS,
                                 // options: 1, 1/2, 1/4, 1/8, 1/16, 1/32, 1/64, 1/128
-                                
-  driver.setMaxSpeed(1000); // max speed in units of full steps/s 
-  driver.setFullSpeed(2000); // full steps/s threshold for disabling microstepping
-  driver.setAcc(2000); // full steps/s^2 acceleration
-  driver.setDec(2000); // full steps/s^2 deceleration
-  
-  driver.setSlewRate(SR_520V_us); // faster may give more torque (but also EM noise),
+
+  driverEXH.setMaxSpeed(1000);                              
+  driverINH.setMaxSpeed(1000); // max speed in units of full steps/s
+  driverEXH.setFullSpeed(2000); 
+  driverINH.setFullSpeed(2000); // full steps/s threshold for disabling microstepping
+  driverEXH.setAcc(2000);
+  driverINH.setAcc(2000); // full steps/s^2 acceleration
+  driverEXH.setDec(2000);
+  driverINH.setDec(2000); // full steps/s^2 deceleration
+
+  driverEXH.setSlewRate(SR_520V_us);
+  driverINH.setSlewRate(SR_520V_us); // faster may give more torque (but also EM noise),
                                   // options are: 114, 220, 400, 520, 790, 980(V/us)
-                                  
-  driver.setOCThreshold(8); // over-current threshold for the 2.8A NEMA23 motor
+
+  driverEXH.setOCThreshold(8);                                
+  driverINH.setOCThreshold(8); // over-current threshold for the 2.8A NEMA23 motor
                             // used in testing. If your motor stops working for
                             // no apparent reason, it's probably this. Start low
                             // and increase until it doesn't trip, then maybe
                             // add one to avoid misfires. Can prevent catastrophic
                             // failures caused by shorts
-  driver.setOCShutdown(OC_SD_ENABLE); // shutdown motor bridge on over-current event
+
+  driverEXH.setOCShutdown(OC_SD_ENABLE);
+  driverINH.setOCShutdown(OC_SD_ENABLE); // shutdown motor bridge on over-current event
                                       // to protect against permanant damage
-  
-  driver.setPWMFreq(PWM_DIV_1, PWM_MUL_0_75); // 16MHz*0.75/(512*1) = 23.4375kHz 
+
+  driverEXH.setPWMFreq(PWM_DIV_1, PWM_MUL_0_75);
+  driverINH.setPWMFreq(PWM_DIV_1, PWM_MUL_0_75); // 16MHz*0.75/(512*1) = 23.4375kHz 
                             // power is supplied to stepper phases as a sin wave,  
                             // frequency is set by two PWM modulators,
                             // Fpwm = Fosc*m/(512*N), N and m are set by DIV and MUL,
                             // options: DIV: 1, 2, 3, 4, 5, 6, 7, 
                             // MUL: 0.625, 0.75, 0.875, 1, 1.25, 1.5, 1.75, 2
-                            
-  driver.setVoltageComp(VS_COMP_DISABLE); // no compensation for variation in Vs as
+
+  driverEXH.setVoltageComp(VS_COMP_DISABLE);
+  driverINH.setVoltageComp(VS_COMP_DISABLE); // no compensation for variation in Vs as
                                           // ADC voltage divider is not populated
-                                          
-  driver.setSwitchMode(SW_USER); // switch doesn't trigger stop, status can be read.
+  driverEXH.setSwitchMode(SW_USER);                                        
+  driverINH.setSwitchMode(SW_USER); // switch doesn't trigger stop, status can be read.
                                  // SW_HARD_STOP: TP1 causes hard stop on connection 
                                  // to GND, you get stuck on switch after homing
-                                      
-  driver.setOscMode(INT_16MHZ); // 16MHz internal oscillator as clock source
+
+  driverEXH.setOscMode(INT_16MHZ);
+  driverINH.setOscMode(INT_16MHZ); // 16MHz internal oscillator as clock source
 
   // KVAL registers set the power to the motor by adjusting the PWM duty cycle,
   // use a value between 0-255 where 0 = no power, 255 = full power.
   // Start low and monitor the motor temperature until you find a safe balance
   // between power and temperature. Only use what you need
-  driver.setRunKVAL(60); //2.8V in voltage mode for 2A max on 1.4ohm coils
-  driver.setAccKVAL(60);
-  driver.setDecKVAL(60);
-  driver.setHoldKVAL(32);
+  driverEXH.setRunKVAL(60);
+  driverINH.setRunKVAL(60); //2.8V in voltage mode for 2A max on 1.4ohm coils
+  driverEXH.setAccKVAL(60);
+  driverINH.setAccKVAL(60);
+  driverEXH.setDecKVAL(60);
+  driverINH.setDecKVAL(60);
+  driverEXH.setHoldKVAL(32);
+  driverINH.setHoldKVAL(32);
 
-  driver.setParam(ALARM_EN, 0x8F); // disable ADC UVLO (divider not populated),
+  driverEXH.setParam(ALARM_EN, 0x8F);
+  driverINH.setParam(ALARM_EN, 0x8F); // disable ADC UVLO (divider not populated),
                                    // disable stall detection (not configured),
                                    // disable switch (not using as hard stop)
-
-  driver.getStatus(); // clears error flags
+  driverEXH.getStatus();
+  driverINH.getStatus(); // clears error flags
 
   //home the actuator
-  driver.move(REV, STARTSTROKE); // move into the stop
-  //while(driver.busyCheck()); // wait fo the move to finish - replaced this with a wait so it becomes non-blocking
+  driverEXH.move(REV, STARTSTROKE);
+  driverINH.move(REV, STARTSTROKE); // move into the stop
+  //while(driverINH.busyCheck()); // wait fo the move to finish - replaced this with a wait so it becomes non-blocking
   delay(2000);
-  driver.resetPos(); //establish home
+  driverEXH.resetPos();
+  driverINH.resetPos(); //establish home
   
 
   //Setup display (i2c test)
@@ -264,7 +294,6 @@ void loop() {
   //TEST: Blower control, buzzer, LEDs, heater switch, solenoid switch
   switch(state) {
     case 0:
-      digitalWrite(LED_BUILTIN,HIGH);
       digitalWrite(PIN_LED_R, HIGH);
       digitalWrite(PIN_LED_Y, HIGH);
       digitalWrite(PIN_LED_G, LOW);
@@ -272,13 +301,13 @@ void loop() {
       digitalWrite(PIN_HEATER, LOW);
       analogWrite(PIN_BUZZER, BUZZER_VOL);
       analogWrite(PIN_BLOWER, BLOWER_HIGH);
-      driver.goTo(OPENPOS);
-      
+      driverEXH.goTo(CLOSEDPOS);
+      driverINH.goTo(OPENPOS);
+            
       state = 1;
       break;
 
     case 1:
-      digitalWrite(LED_BUILTIN,LOW);
       digitalWrite(PIN_LED_R, LOW);
       digitalWrite(PIN_LED_Y, LOW);
       digitalWrite(PIN_LED_G, HIGH);
@@ -286,7 +315,8 @@ void loop() {
       digitalWrite(PIN_HEATER, HIGH);
       analogWrite(PIN_BUZZER, 0);
       analogWrite(PIN_BLOWER, BLOWER_LOW);
-      driver.goTo(CLOSEDPOS);
+      driverEXH.goTo(OPENPOS);
+      driverINH.goTo(CLOSEDPOS);
       
       state = 0;
       break;
