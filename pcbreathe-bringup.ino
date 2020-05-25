@@ -37,7 +37,7 @@ const int chipSelect = PA15;  //SD card chip select
 //Pinch valve motion settings
 #define STARTSTROKE 7000
 #define OPENPOS 200
-#define CLOSEDPOS 6200
+#define CLOSEDPOS 6800
 
 //i2c test device definitions
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -168,8 +168,10 @@ void setup() {
 
   //home the actuator
   driver.move(REV, STARTSTROKE); // move into the stop
-  while(driver.busyCheck()); // wait fo the move to finish
+  //while(driver.busyCheck()); // wait fo the move to finish - replaced this with a wait so it becomes non-blocking
+  delay(2000);
   driver.resetPos(); //establish home
+  
 
   //Setup display (i2c test)
   Wire.begin();
@@ -184,7 +186,7 @@ void setup() {
     display.cp437(true);         // Use full 256 char 'Code Page 437' font
   }
 
-
+  //[START COMMENT HERE TO REMOVE SD CARD TEST] look for similar END COMMENT tag below
   //TEST: SD CARD
   Serial.print("\nInitializing SD card...");
 
@@ -252,6 +254,7 @@ void setup() {
   // list all files in the card with date and size
   root.ls(LS_R | LS_DATE | LS_SIZE);
 
+  //[END COMMENT HERE TO REMOVE SD CARD TEST]
 
 }
 
