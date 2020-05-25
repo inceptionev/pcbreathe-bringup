@@ -3,7 +3,13 @@ bringup code for RespiraWorks Ventilator Mainboard Rev 1.0
 
 make sure to check the pcbreathe repo for quick start quide and board hardware errata: [https://github.com/RespiraWorks/pcbreathe](https://github.com/RespiraWorks/pcbreathe)
 
-for more test code with a state machine for running a ventilator setup in closed-loop control mode, see: [https://github.com/inceptionev/FMLtest](https://github.com/inceptionev/FMLtest)
+for unofficial (proceed at your own risk!) test code with a state machine for running a ventilator setup in closed-loop control mode, see: [https://github.com/inceptionev/FMLtest](https://github.com/inceptionev/FMLtest)
+
+Quick notes:
+* If you want to use this for capturing serial data out, you may need to comment or uncomment some of the sections at the bottom of the code for Cypress or Arduino serial formatting.  It indicates in code which blocks apply.  
+* Also, the i2c display block (also labeled) slows down the cycle rate quite a bit, so comment out that block too if you want to speed it up.  
+* If the stepper motor driver is not installed or not powered, this code will also not run.  Either power the board (instructions here: https://github.com/RespiraWorks/pcbreathe) or comment out any reference to the stepper motors.
+* You will need to install some dependencies to use the code, which is also documented in the readme on git, in the section titled "STM32duino setup".  
 
 ## How to use this test:
 * Follow the instructions on the https://github.com/RespiraWorks/pcbreathe readme if you need help getting the hardware set up, where to plug things in, etc.
@@ -42,7 +48,7 @@ for more test code with a state machine for running a ventilator setup in closed
 * Further dependencies.  You will also need to install the following packages to run this code (install by going to Tools...Manage Libraries... in your Arduino IDE and seaching for the below):
   * Adafruit SDD1306
   * Adafruit GFX
-
+  * [powerSTEP01 arduino library](https://github.com/Megunolink/powerSTEP01_Arduino_Library) (may require manual install: follow the directions in the readme of the library.) 
 
 
 ## Getting data out
