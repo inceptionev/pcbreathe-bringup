@@ -5,10 +5,10 @@ make sure to check the pcbreathe repo for quick start quide and board hardware e
 
 for unofficial (proceed at your own risk!) test code with a state machine for running a ventilator setup in closed-loop control mode, see: [https://github.com/inceptionev/FMLtest](https://github.com/inceptionev/FMLtest)
 
-Quick notes:
+## Quick notes
 * This version is coded without wait states to work with any combination of peripherals.  You do not need to have everything plugged in to make it work.
 * However, this means that the cycle time may vary depending on what peripherals are populated.  Comment out parts as needed if they are slowing things down.
-    * At minimum the STM32 Nucleo is required.  It will just blink the LED and output to USB serial.
+    * At minimum the STM32 Nucleo is required.  It will just output info to USB serial.
     * With the PCB added, it will beep the buzzer and flash the RED LED on the backside of the PCB.
     * With the uSD card plugged in, it will run read info from the SD card and publish to USB serial.
     * Alternates actuating the heater and solenoid
