@@ -48,6 +48,10 @@ const int chipSelect = PA15;  //SD card chip select
 #define OPENPOS 200
 #define CLOSEDPOS 6700
 
+//Proportional Solenoid motion settings
+#define PSOL_CLOSEDPOS 1000
+#define PSOL_OPENPOS 1100
+
 //i2c test device definitions
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 32 // OLED display height, in pixels
@@ -61,9 +65,10 @@ powerSTEP driverEXH(1, nCS_PIN, nSTBY_nRESET_PIN);
 
 //test parameters
 #define BUZZER_VOL 5 //buzzer volume
-#define CYCLE_PERIOD 1000 //actuation cycle timing in ms
-#define BLOWER_HIGH 150 //blower high throttle command
-#define BLOWER_LOW 100 //blower low throttle command
+#define CYCLE_PERIOD 500 //actuation cycle timing in ms, note that because the i2c display writing takes a long time, this may not correlate to real seconds.
+#define CONTROL_PERIOD 10 // control cycle period
+#define BLOWER_HIGH 160 //blower high throttle command
+#define BLOWER_LOW 160 //blower low throttle command
 
 //create state machine variables
 int pressure = 0;
@@ -82,6 +87,10 @@ SdFile root;
 
 //instantiate USART3
 HardwareSerial Serial3(PB11,PB10);
+
+//state machine variables
+unsigned int cyclecounter;
+unsigned int psol_position;
 
 void setup() {
   // put your setup code here, to run once:
@@ -297,28 +306,37 @@ void loop() {
       digitalWrite(PIN_LED_R, HIGH);
       digitalWrite(PIN_LED_Y, HIGH);
       digitalWrite(PIN_LED_G, LOW);
-      digitalWrite(PIN_SOLENOID, HIGH);
+      //psol_position = (PSOL_CLOSEDPOS + cyclecounter) < PSOL_OPENPOS ? (PSOL_CLOSEDPOS + cyclecounter) : PSOL_OPENPOS;
+      psol_position = PSOL_OPENPOS;
+      analogWrite(PIN_SOLENOID, psol_position);
       digitalWrite(PIN_HEATER, LOW);
       analogWrite(PIN_BUZZER, BUZZER_VOL);
       analogWrite(PIN_BLOWER, BLOWER_HIGH);
       driverEXH.goTo(CLOSEDPOS);
       driverINH.goTo(OPENPOS);
-            
-      state = 1;
+      if(cyclecounter > int(CYCLE_PERIOD/CONTROL_PERIOD)) {
+        cyclecounter = 0;
+        state = 1;
+      }
+      cyclecounter++;
       break;
 
     case 1:
       digitalWrite(PIN_LED_R, LOW);
       digitalWrite(PIN_LED_Y, LOW);
       digitalWrite(PIN_LED_G, HIGH);
-      digitalWrite(PIN_SOLENOID, LOW);
+      //analogWrite(PIN_SOLENOID, (psol_position-cyclecounter) > PSOL_CLOSEDPOS ? (psol_position-cyclecounter) : PSOL_CLOSEDPOS);
+      analogWrite(PIN_SOLENOID, PSOL_CLOSEDPOS);
       digitalWrite(PIN_HEATER, HIGH);
       analogWrite(PIN_BUZZER, 0);
       analogWrite(PIN_BLOWER, BLOWER_LOW);
       driverEXH.goTo(OPENPOS);
       driverINH.goTo(CLOSEDPOS);
-      
-      state = 0;
+      if(cyclecounter > int(CYCLE_PERIOD/CONTROL_PERIOD)) {
+        cyclecounter = 0;
+        state = 0;
+      }
+      cyclecounter++;
       break;
 
     default:
@@ -389,5 +407,5 @@ void loop() {
   
   
 
-  delay(CYCLE_PERIOD);
+  delay(CONTROL_PERIOD);
 }
