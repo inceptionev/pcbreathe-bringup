@@ -17,9 +17,6 @@
 
 #include <SPI.h>
 #include <SD.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
-#include <Wire.h>
 #include <powerSTEP01ArduinoLibrary.h>
 
 
@@ -45,15 +42,10 @@ const int chipSelect = PA15;  //SD card chip select
 
 //Pinch valve motion settings
 #define STARTSTROKE 7000
-#define OPENPOS 200
-#define CLOSEDPOS 6700
+#define OPENPOS 4000
+#define CLOSEDPOS 6500
 
 //i2c test device definitions
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 32 // OLED display height, in pixels
-// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
-#define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);  //instantiate display
 
 //instantiate stepper driver
 powerSTEP driverINH(0, nCS_PIN, nSTBY_nRESET_PIN);
@@ -61,9 +53,12 @@ powerSTEP driverEXH(1, nCS_PIN, nSTBY_nRESET_PIN);
 
 //test parameters
 #define BUZZER_VOL 5 //buzzer volume
-#define CYCLE_PERIOD 1000 //actuation cycle timing in ms
-#define BLOWER_HIGH 150 //blower high throttle command
-#define BLOWER_LOW 100 //blower low throttle command
+#define STATE_PERIOD 2000 //actuation cycle timing in ms
+#define CONTROL_PERIOD 10 // control cycle period
+#define STEPSIZE 125 //for pinchvalve characterization, amount to step the valve each time (6500-4000)/20 = 125
+
+#define BLOWER_HIGH 210 //blower high throttle command
+#define BLOWER_LOW 220 //blower low throttle command
 
 //create state machine variables
 int pressure = 0;
@@ -74,24 +69,19 @@ int inh_flow =0;
 int exh_flow = 0;
 int state = 0;
 unsigned int now = 0;
+int cyclecounter=0;
+int statecounter=0;
+int commandINH=OPENPOS;
 
 //create objects for SD card test
-Sd2Card card;
-SdVolume volume;
-SdFile root;
 
 //instantiate USART3
-HardwareSerial Serial3(PB11,PB10);
 
 void setup() {
   // put your setup code here, to run once:
   
   // Open serial communications and wait for port to open:
-  Serial.begin(9600);
-  Serial3.begin(9600);
-  //while (!Serial) {
-  //  ; // wait for serial port to connect. Needed for native USB port only
-  //}
+  Serial.begin(115200);
 
   //set hw pin modes
   pinMode(PIN_LED_R,OUTPUT);
@@ -204,88 +194,11 @@ void setup() {
   
 
   //Setup display (i2c test)
-  Wire.begin();
-  for (int k=0;k<4;k++) {
-    Wire.beginTransmission(0x70); //address the i2c switch
-    Wire.write(4+k); //select i2c port, base address 4, cycle thru 5-7
-    Wire.endTransmission(); //send and stop
-    display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-    display.setTextSize(1);      // Normal 1:1 pixel scale
-    display.setTextColor(SSD1306_WHITE); // Draw white text
-    display.setCursor(0, 0);     // Start at top-left corner
-    display.cp437(true);         // Use full 256 char 'Code Page 437' font
-  }
+  
 
   //[START COMMENT HERE TO REMOVE SD CARD TEST] look for similar END COMMENT tag below
   //TEST: SD CARD
-  Serial.print("\nInitializing SD card...");
-
-  // we'll use the initialization code from the utility libraries
-  // since we're just testing if the card is working!
-  if (!card.init(SPI_HALF_SPEED, chipSelect)) {
-    Serial.println("initialization failed. Things to check:");
-    Serial.println("* is a card inserted?");
-    Serial.println("* is your wiring correct?");
-    Serial.println("* did you change the chipSelect pin to match your shield or module?");
-  } else {
-    Serial.println("Wiring is correct and a card is present.");
-  }
-
-  // print the type of card
-  Serial.println();
-  Serial.print("Card type:         ");
-  switch (card.type()) {
-    case SD_CARD_TYPE_SD1:
-      Serial.println("SD1");
-      break;
-    case SD_CARD_TYPE_SD2:
-      Serial.println("SD2");
-      break;
-    case SD_CARD_TYPE_SDHC:
-      Serial.println("SDHC");
-      break;
-    default:
-      Serial.println("Unknown");
-  }
-
-  // Now we will try to open the 'volume'/'partition' - it should be FAT16 or FAT32
-  if (!volume.init(card)) {
-    Serial.println("Could not find FAT16/FAT32 partition.\nMake sure you've formatted the card");
-  }
-
-  Serial.print("Clusters:          ");
-  Serial.println(volume.clusterCount());
-  Serial.print("Blocks x Cluster:  ");
-  Serial.println(volume.blocksPerCluster());
-
-  Serial.print("Total Blocks:      ");
-  Serial.println(volume.blocksPerCluster() * volume.clusterCount());
-  Serial.println();
-
-  // print the type and size of the first FAT-type volume
-  uint32_t volumesize;
-  Serial.print("Volume type is:    FAT");
-  Serial.println(volume.fatType(), DEC);
-
-  volumesize = volume.blocksPerCluster();    // clusters are collections of blocks
-  volumesize *= volume.clusterCount();       // we'll have a lot of clusters
-  volumesize /= 2;                           // SD card blocks are always 512 bytes (2 blocks are 1KB)
-  Serial.print("Volume size (Kb):  ");
-  Serial.println(volumesize);
-  Serial.print("Volume size (Mb):  ");
-  volumesize /= 1024;
-  Serial.println(volumesize);
-  Serial.print("Volume size (Gb):  ");
-  Serial.println((float)volumesize / 1024.0);
-
-  Serial.println("\nFiles found on the card (name, date and size in bytes): ");
-  root.openRoot(volume);
-
-  // list all files in the card with date and size
-  root.ls(LS_R | LS_DATE | LS_SIZE);
-
-  //[END COMMENT HERE TO REMOVE SD CARD TEST]
-
+ 
 }
 
 void loop() {
@@ -295,53 +208,74 @@ void loop() {
   switch(state) {
     case 0:
       digitalWrite(PIN_LED_R, HIGH);
-      digitalWrite(PIN_LED_Y, HIGH);
-      digitalWrite(PIN_LED_G, LOW);
-      digitalWrite(PIN_SOLENOID, HIGH);
-      digitalWrite(PIN_HEATER, LOW);
       analogWrite(PIN_BUZZER, BUZZER_VOL);
       analogWrite(PIN_BLOWER, BLOWER_HIGH);
-      driverEXH.goTo(CLOSEDPOS);
-      driverINH.goTo(OPENPOS);
-            
-      state = 1;
+      commandINH = OPENPOS+statecounter*STEPSIZE > CLOSEDPOS ? CLOSEDPOS : OPENPOS+statecounter*STEPSIZE;
+
+      cyclecounter++;
+      
+      if (cyclecounter > (STATE_PERIOD/CONTROL_PERIOD - 2)) {
+        statecounter++;
+        cyclecounter=0;
+      }
+     
+      if (OPENPOS+statecounter*STEPSIZE > CLOSEDPOS) {
+        cyclecounter = 0;
+        statecounter--;
+        state = 1;
+      }            
+      
       break;
 
     case 1:
       digitalWrite(PIN_LED_R, LOW);
-      digitalWrite(PIN_LED_Y, LOW);
-      digitalWrite(PIN_LED_G, HIGH);
-      digitalWrite(PIN_SOLENOID, LOW);
-      digitalWrite(PIN_HEATER, HIGH);
       analogWrite(PIN_BUZZER, 0);
       analogWrite(PIN_BLOWER, BLOWER_LOW);
-      driverEXH.goTo(OPENPOS);
-      driverINH.goTo(CLOSEDPOS);
+      commandINH = OPENPOS+statecounter*STEPSIZE < OPENPOS ? OPENPOS : OPENPOS+statecounter*STEPSIZE;
+
+      cyclecounter++;
       
-      state = 0;
+      if (cyclecounter > (STATE_PERIOD/CONTROL_PERIOD - 2)) {
+        statecounter--;
+        cyclecounter = 0;
+      }
+      
+      if (OPENPOS+statecounter*STEPSIZE < OPENPOS) {
+        cyclecounter = 0;
+        state = 2;
+      }
+      break;
+
+    case 2:
+      analogWrite(PIN_BUZZER, 50);
       break;
 
     default:
       state = 0;
       break;
   }
+
+  driverINH.goTo(commandINH);
   pressure = analogRead(PIN_PRES);
   flow_inh = analogRead(PIN_INH);
   flow_exh = analogRead(PIN_EXH);
   vsense = analogRead(PIN_VSENSE);
   now = (unsigned int)millis();
   
-  //Output serial data in Cypress Bridge Control Panel format
-  //Serial.print("C"); //output to monitor
-  //Serial.write(now>>8);
-  //Serial.write(now&0xff);
-  //Serial.write(int(pressure)>>8); //output to monitor
-  //Serial.write(int(pressure)&0xff); //output to monitor
-  //Serial.write(int(flow_inh)>>8); //output to monitor
-  //Serial.write(int(flow_inh)&0xff); //output to monitor
-  //Serial.write(int(flow_exh)>>8); //output to monitor
-  //Serial.write(int(flow_exh)&0xff); //output to monitor
-  
+//  Output serial data in Cypress Bridge Control Panel format
+  Serial.print("C"); //output to monitor
+  Serial.write(now>>8);
+  Serial.write(now&0xff);
+  Serial.write(int(map(commandINH,OPENPOS,CLOSEDPOS,0,1023))>>8); //output to monitor
+  Serial.write(int(map(commandINH,OPENPOS,CLOSEDPOS,0,1023))&0xff); //output to monitor
+  Serial.write(int(pressure)>>8); //output to monitor
+  Serial.write(int(pressure)&0xff); //output to monitor
+  Serial.write(int(flow_inh)>>8); //output to monitor
+  Serial.write(int(flow_inh)&0xff); //output to monitor
+  Serial.write(int(flow_exh)>>8); //output to monitor
+  Serial.write(int(flow_exh)&0xff); //output to monitor
+
+  /*
   //Output serial data in Arduino Serial Plotter Format
   Serial.print(pressure);
   Serial.print("\t");
@@ -386,8 +320,8 @@ void loop() {
     display.write(Serial3.read()); //prints the last character received from pi
     display.display(); //send the buffer
   }
-  
+  */
   
 
-  delay(CYCLE_PERIOD);
+  delay(CONTROL_PERIOD);
 }
