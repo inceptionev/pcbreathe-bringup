@@ -18,6 +18,8 @@
 #include <SPI.h>
 #include <SD.h>
 #include <powerSTEP01ArduinoLibrary.h>
+#include <Wire.h>
+#include <AMS5915.h>
 
 
 //hardware definitions
@@ -42,7 +44,7 @@ const int chipSelect = PA15;  //SD card chip select
 
 //Pinch valve motion settings
 #define STARTSTROKE 7000
-#define OPENPOS 4000
+#define OPENPOS 2000
 #define CLOSEDPOS 6500
 
 //i2c test device definitions
@@ -51,14 +53,17 @@ const int chipSelect = PA15;  //SD card chip select
 powerSTEP driverINH(0, nCS_PIN, nSTBY_nRESET_PIN);
 powerSTEP driverEXH(1, nCS_PIN, nSTBY_nRESET_PIN);
 
+//instantiate i2c sensor
+AMS5915 sPress(Wire,0x28,AMS5915::AMS5915_0100_D);
+
 //test parameters
 #define BUZZER_VOL 5 //buzzer volume
 #define STATE_PERIOD 2000 //actuation cycle timing in ms
 #define CONTROL_PERIOD 10 // control cycle period
-#define STEPSIZE 125 //for pinchvalve characterization, amount to step the valve each time (6500-4000)/20 = 125
+#define STEPSIZE 225 //for pinchvalve characterization, amount to step the valve each time (6500-4000)/20 = 125
 
-#define BLOWER_HIGH 210 //blower high throttle command
-#define BLOWER_LOW 220 //blower low throttle command
+#define BLOWER_HIGH 255 //blower high throttle command
+#define BLOWER_LOW 255 //blower low throttle command
 
 //create state machine variables
 int pressure = 0;
@@ -72,6 +77,8 @@ unsigned int now = 0;
 int cyclecounter=0;
 int statecounter=0;
 int commandINH=OPENPOS;
+uint16_t ams_dP = 0;
+uint16_t ams_temp = 0;
 
 //create objects for SD card test
 
@@ -198,6 +205,13 @@ void setup() {
 
   //[START COMMENT HERE TO REMOVE SD CARD TEST] look for similar END COMMENT tag below
   //TEST: SD CARD
+
+  //setup i2c
+  Wire.begin();
+  Wire.beginTransmission(0x70); //address the i2c switch
+  Wire.write(7); //select i2c port, base address 4, cycle thru 5-7
+  Wire.endTransmission(); //send and stop
+  sPress.begin(); //start sensor
  
 }
 
@@ -261,19 +275,25 @@ void loop() {
   flow_exh = analogRead(PIN_EXH);
   vsense = analogRead(PIN_VSENSE);
   now = (unsigned int)millis();
+  sPress.readBytes(&ams_dP,  &ams_temp);
+  
   
 //  Output serial data in Cypress Bridge Control Panel format
   Serial.print("C"); //output to monitor
   Serial.write(now>>8);
   Serial.write(now&0xff);
-  Serial.write(int(map(commandINH,OPENPOS,CLOSEDPOS,0,1023))>>8); //output to monitor
-  Serial.write(int(map(commandINH,OPENPOS,CLOSEDPOS,0,1023))&0xff); //output to monitor
+  Serial.write(int(commandINH)>>8); //output to monitor
+  Serial.write(int(commandINH)&0xff); //output to monitor
   Serial.write(int(pressure)>>8); //output to monitor
   Serial.write(int(pressure)&0xff); //output to monitor
   Serial.write(int(flow_inh)>>8); //output to monitor
   Serial.write(int(flow_inh)&0xff); //output to monitor
   Serial.write(int(flow_exh)>>8); //output to monitor
   Serial.write(int(flow_exh)&0xff); //output to monitor
+  Serial.write(int(ams_dP)>>8); //output to monitor
+  Serial.write(int(ams_dP)&0xff); //output to monitor
+  Serial.write(int(ams_temp)>>8); //output to monitor
+  Serial.write(int(ams_temp)&0xff); //output to monitor
 
   /*
   //Output serial data in Arduino Serial Plotter Format
