@@ -28,12 +28,14 @@ Outputs can be plotted and exported with Cypress PSoC Programmer (Bridge Control
 * In the editor tab, use this command:
 
     ```RX8 [h=43] @1Key1 @0Key1 @1Key2 @0Key2 @1Key3 @0Key3 @1Key4 @0Key4 @1Key5 @0Key5 @1Key6 @0Key6 @1Key7 @0Key7```
-* In order, each of these outputs is: Time(ms), Valve Position, Pressure dP, Inhale dP, Exhale dP, AMS5915
-* The MPXV5004DPs come out as 10bit values and the scaling is ```kPa = 5*Value/1023-1```.  The AMS5915 is 14bit and the scaling is kPa = ```10*(Value-1638)/(14745-1638)```.
+* In order, each of these outputs is: Time(ms), Valve Position, Pressure dP, Inhale dP, Exhale dP, AMS5915 pressure, AMS5915 temperature
+* The MPXV5004DPs come out as 14bit values and the scaling is ```kPa = 5*Value/16383-1```.  The AMS5915 is 14bit and the scaling is kPa = ```10*(Value-1638)/(14745-1638)```.
 * The MPXV5004DP sensors are assigned to Pressure, Inhale, and Exhale on this board, but of course you can connect them to anything you want to measure
 * The hypodermic needles can be useful for picking off pressures anywhere you have rubber tubing.
 * Be careful not to poke yourself.
 * Watch out for dynamic pressure effects when using the needles.  I have found better results by inserting the needle at an acute angle to the flow, pointing downstream, and retracting the needle such that the opening is near the sidewall of the hose.
+
+![hypodermic needle pickoff](needle_pressure_pickoff.jpg)
 * Chart > Variable Settings
 * Tick Key1 through Key7, configure as int, and choose colors > hit OK
 * Press >|< icon to connect to com port if necessary
@@ -41,11 +43,28 @@ Outputs can be plotted and exported with Cypress PSoC Programmer (Bridge Control
 * both traces should now be plotting
 * Click STOP button to stop recording.
 * Chart > Export Collected Data in the format of your choice.  Note that this method captures a maximum of 10,000 samples.  It will clip the beginning of your experiment if it is longer than 10k samples.
+* You can run longer experiments within the 10k sample limit by increasing CONTROL_PERIOD, which will reduce the sampling rate.
 * If you need more than 10k samples use a different logger (or use the TO FILE button instead of REPEAT, it will output hex data that you can copy-and-paste, so be prepared to do some post-processing)
 
 ## HOW TO USE THIS TEST (generic to pcbreathe-bringup):
 * Follow the instructions on the https://github.com/inceptionev/pcbreathe-bringup readme to set up the hardware and the IDE.
-   
+    
+
+## STM32duino setup
+* To use this code, you will need to setup the Arduino IDE to talk to STM32.  Use this link for instructions: [http://www.emcu.eu/2017/03/13/how-to-use-stm32-and-arduino-ide/](http://www.emcu.eu/2017/03/13/how-to-use-stm32-and-arduino-ide/) 
+* To program this board, you will need to go to Tools... and select the following
+    * Board: Nucleo-64
+    * Board part number: L452RE
+    * Upload method: Mass Storage
+    * Port: [select the com port where you computer assigned the Nucleo]
+    * other settings can be left on their defaults.
+* Further dependencies.  You will also need to install the following packages to run this code (install by going to Tools...Manage Libraries... in your Arduino IDE and seaching for the below):
+  * Adafruit SDD1306
+  * Adafruit GFX
+  * [powerSTEP01 arduino library](https://github.com/Megunolink/powerSTEP01_Arduino_Library) (may require manual install: follow the directions in the readme of the library.) 
+  * some folks have reported issues with the Mass Storage programming method (not enough space error).  Here are a couple things to try:
+  * make sure you have the latest version of the Arduino IDE and the STM32duino board package (first link in this section up abobe).
+  * If that doesn't work the "STM32CubeProgrammer (SWD)" programming option will almost certainly work.  However, to use the SWD mode you will need to download and install the [STM32CubeProgrammer](https://www.st.com/content/st_com/en/products/development-tools/software-development-tools/stm32-software-development-tools/stm32-programmers/stm32cubeprog.html#overview)
 */
 
 #include <SPI.h>
@@ -77,8 +96,8 @@ const int chipSelect = PA15;  //SD card chip select
 
 //Pinch valve motion settings
 #define STARTSTROKE 7000
-#define OPENPOS 2000
-#define CLOSEDPOS 6500
+#define OPENPOS 2250
+#define CLOSEDPOS 6250
 #define BLIPPOS 4500
 
 //i2c test device definitions
@@ -94,7 +113,7 @@ AMS5915 sPress(Wire,0x28,AMS5915::AMS5915_0100_D);
 #define BUZZER_VOL 5 //buzzer volume
 #define STATE_PERIOD 2000 //actuation cycle timing in ms
 #define CONTROL_PERIOD 10 // control cycle period
-#define STEPSIZE 225 //for pinchvalve characterization, amount to step the valve each time (6500-4000)/20 = 125
+#define STEPSIZE 200 //for pinchvalve characterization, amount to step the valve each time (6500-4000)/20 = 125
 
 #define BLOWER_HIGH 255 //blower high throttle command
 #define BLOWER_LOW 255 //blower low throttle command
@@ -138,6 +157,8 @@ void setup() {
   pinMode(MOSI, OUTPUT);
   pinMode(MISO, OUTPUT);
   pinMode(SCK, OUTPUT);
+
+  analogReadResolution(14);
 
   // Reset powerSTEP and set CS
   digitalWrite(nSTBY_nRESET_PIN, HIGH);
@@ -278,11 +299,12 @@ void loop() {
     case 1:
       analogWrite(PIN_BLOWER, BLOWER_HIGH);
       commandINH = BLIPPOS;
-      cyclecounter = 0;
+      cyclecounter++;
       if (cyclecounter > (STATE_PERIOD/CONTROL_PERIOD - 2)) {
         state = 2;
         cyclecounter=0;
       }
+      break;
 
     case 2:
       digitalWrite(PIN_LED_R, LOW);
