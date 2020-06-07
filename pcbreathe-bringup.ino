@@ -334,15 +334,17 @@ void loop() {
   now = (unsigned int)millis();
   
   //Output serial data in Cypress Bridge Control Panel format
-  //Serial.print("C"); //output to monitor
-  //Serial.write(now>>8);
-  //Serial.write(now&0xff);
-  //Serial.write(int(pressure)>>8); //output to monitor
-  //Serial.write(int(pressure)&0xff); //output to monitor
-  //Serial.write(int(flow_inh)>>8); //output to monitor
-  //Serial.write(int(flow_inh)&0xff); //output to monitor
-  //Serial.write(int(flow_exh)>>8); //output to monitor
-  //Serial.write(int(flow_exh)&0xff); //output to monitor
+  /*
+  Serial.print("C"); //output to monitor
+  Serial.write(now>>8);
+  Serial.write(now&0xff);
+  Serial.write(int(pressure)>>8); //output to monitor
+  Serial.write(int(pressure)&0xff); //output to monitor
+  Serial.write(int(flow_inh)>>8); //output to monitor
+  Serial.write(int(flow_inh)&0xff); //output to monitor
+  Serial.write(int(flow_exh)>>8); //output to monitor
+  Serial.write(int(flow_exh)&0xff); //output to monitor
+  */
   
   //Output serial data in Arduino Serial Plotter Format
   Serial.print(pressure);
