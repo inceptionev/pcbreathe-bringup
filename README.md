@@ -40,6 +40,7 @@ Outputs can be plotted and exported with Cypress PSoC Programmer (Bridge Control
 * both traces should now be plotting
 * Click STOP button to stop recording.
 * Chart > Export Collected Data in the format of your choice.  Note that this method captures a maximum of 10,000 samples.  It will clip the beginning of your experiment if it is longer than 10k samples.
+* You can run longer experiments within the 10k sample limit by increasing CONTROL_PERIOD, which will reduce the sampling rate.
 * If you need more than 10k samples use a different logger (or use the TO FILE button instead of REPEAT, it will output hex data that you can copy-and-paste, so be prepared to do some post-processing)
 
 ## HOW TO USE THIS TEST (generic to pcbreathe-bringup):
