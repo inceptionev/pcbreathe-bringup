@@ -1,19 +1,52 @@
-//bringup test code for RespiraWorks Ventilator Mainboard Rev 1.0
-//use STM32duino and select appropriate board and COM port and use SWD programming
-//analog outputs can be plotted use Arduino Serial Plotter
-//
-//## HOW TO USE THIS TEST:
-//* Follow the instructions on the https://github.com/inceptionev/pcbreathe-bringup readme to set up the hardware and the IDE.
-//* This version is coded without wait states to work with any combination of peripherals.
-//* However, this means that the cycle time may vary depending on what peripherals are populated.  Comment out parts as needed if they are slowing things down.
-//    * At minimum the STM32 Nucleo is required.  It will just blink the LED and output to USB serial.
-//    * With the PCB added, it will beep the buzzer and flash the RED LED on the backside of the PCB.
-//    * With the uSD card plugged in, it will run read info from the SD card and publish to USB serial.
-//    * Alternates actuating the heater and solenoid
-//    * Drives i2c SSD1306 display on any of the 4 PCB ports for i2c testing
-//    * One or two X-NUCLEO-IHM03A1 stepper driver modules, values in this code are selected for driving Marc-designed pinch valves, but will just spin any stepper motor for testing.  Look up the X-NUCLEO-IHM03A1 user guide to configure the hardware for stacking.  You'll have to solder some resistors.
-//    * With the Rpi populated, it will send sensor data to the Rpi over serial and echo back the last character received from the Rpi UART.
+/*
+# pcbreathe-bringup
+# bringup test code for RespiraWorks Ventilator Mainboard Rev 1.0
+use STM32duino and select appropriate board and COM port and use SWD programming
 
+this branch of pcbreathe-bringup, pcbreathe-PinchValveCharacterization, was created to characterize the proportional stepper valves designed by Marc Auger and the venturi flow sensors designed by Ethan Chaleff for RespiraWorks.
+
+This code was writted by Edwin Chiu for RespiraWorks.
+
+## WHAT IT DOES:
+* It sets the blower to a fixed power level and ramps through a series of position in the inhale limb pinch valve.
+* For characterizing the pinch valves, it can be used with a low-dP flow sensors such as the AD Pneumotachograph downstream of the valve.  Note that you may want to remove the venturi for this test.
+* It can also be used to provide varying flow rates for venturi sensor characterization.  In this case, put the venturi downstream of the valve and a reference flow sensor downstream of that.
+* It supports an AMS5915_0100_D i2c differential pressure sensor on port I2C SENSOR D on the PCB.  Refer to the ICD if you need a pinout. (But the setup may have an adapter cable provided to plug directly into I2C SENSOR D.)
+
+## SETTINGS:
+* In the #defines below, most of the settings for this test can be edited
+* STATE_PERIOD is the dwell time at each valve position setting
+* CONTROL_PERIOD is the sampling rate of the data output
+* The test will cycle from OPENPOS with increment STEPSIZE until it reaches CLOSEDSIZE.
+* Then it will make a one-STATE_PERIOD blip to position BLIPPOS, this creates a clear signal to assists in aligninging the data with a reference data acquision setup.
+* The test will then cycle back from CLOSEDPOS with increment STEPSIZE until it reaches OPENPOS.
+
+## GETTING DATA OUT:
+Outputs can be plotted and exported with Cypress PSoC Programmer (Bridge Control Panel Tool)
+* Download and install, connect serial
+* Tools > Protocol Configuration > serial 115200:8n1 > hit OK
+* In the editor tab, use this command:
+
+    ```RX8 [h=43] @1Key1 @0Key1 @1Key2 @0Key2 @1Key3 @0Key3 @1Key4 @0Key4 @1Key5 @0Key5 @1Key6 @0Key6 @1Key7 @0Key7```
+* In order, each of these outputs is: Time(ms), Valve Position, Pressure dP, Inhale dP, Exhale dP, AMS5915
+* The MPXV5004DPs come out as 10bit values and the scaling is ```kPa = 5*Value/1023-1```.  The AMS5915 is 14bit and the scaling is kPa = ```10*(Value-1638)/(14745-1638)```.
+* The MPXV5004DP sensors are assigned to Pressure, Inhale, and Exhale on this board, but of course you can connect them to anything you want to measure
+* The hypodermic needles can be useful for picking off pressures anywhere you have rubber tubing.
+* Be careful not to poke yourself.
+* Watch out for dynamic pressure effects when using the needles.  I have found better results by inserting the needle at an acute angle to the flow, pointing downstream, and retracting the needle such that the opening is near the sidewall of the hose.
+* Chart > Variable Settings
+* Tick Key1 through Key7, configure as int, and choose colors > hit OK
+* Press >|< icon to connect to com port if necessary
+* Click REPEAT button, go to Chart tab  
+* both traces should now be plotting
+* Click STOP button to stop recording.
+* Chart > Export Collected Data in the format of your choice.  Note that this method captures a maximum of 10,000 samples.  It will clip the beginning of your experiment if it is longer than 10k samples.
+* If you need more than 10k samples use a different logger (or use the TO FILE button instead of REPEAT, it will output hex data that you can copy-and-paste, so be prepared to do some post-processing)
+
+## HOW TO USE THIS TEST (generic to pcbreathe-bringup):
+* Follow the instructions on the https://github.com/inceptionev/pcbreathe-bringup readme to set up the hardware and the IDE.
+   
+*/
 
 #include <SPI.h>
 #include <SD.h>
@@ -46,6 +79,7 @@ const int chipSelect = PA15;  //SD card chip select
 #define STARTSTROKE 7000
 #define OPENPOS 2000
 #define CLOSEDPOS 6500
+#define BLIPPOS 4500
 
 //i2c test device definitions
 
@@ -242,6 +276,15 @@ void loop() {
       break;
 
     case 1:
+      analogWrite(PIN_BLOWER, BLOWER_HIGH);
+      commandINH = BLIPPOS;
+      cyclecounter = 0;
+      if (cyclecounter > (STATE_PERIOD/CONTROL_PERIOD - 2)) {
+        state = 2;
+        cyclecounter=0;
+      }
+
+    case 2:
       digitalWrite(PIN_LED_R, LOW);
       analogWrite(PIN_BUZZER, 0);
       analogWrite(PIN_BLOWER, BLOWER_LOW);
@@ -260,7 +303,7 @@ void loop() {
       }
       break;
 
-    case 2:
+    case 3:
       analogWrite(PIN_BUZZER, 50);
       break;
 
