@@ -62,7 +62,27 @@ for unofficial (proceed at your own risk!) test code with a state machine for ru
   * If that doesn't work the "STM32CubeProgrammer (SWD)" programming option will almost certainly work.  However, to use the SWD mode you will need to download and install the [STM32CubeProgrammer](https://www.st.com/content/st_com/en/products/development-tools/software-development-tools/stm32-software-development-tools/stm32-programmers/stm32cubeprog.html#overview)
 
 
-## Getting data out
-The code outputs data on the serial port attached to the ST-LINK USB serial port emulator interface at 9600 baud.
+## GETTING DATA OUT:
+Outputs can be plotted and exported with Cypress PSoC Programmer (Bridge Control Panel Tool)
+* Download and install, connect serial
+* Tools > Protocol Configuration > serial 115200:8n1 > hit OK
+* In the editor tab, use this command:
 
-The code has the ability to output in either Arduino Plotter format or Cypress Bridge Control Panel formal, just uncomment the correspoinding lines of code at the bottom of the sketch.
+    ```RX8 [h=43] @1Key1 @0Key1 @1Key2 @0Key2 @1Key3 @0Key3 @1Key4 @0Key4 @1Key5 @0Key5 @1Key6 @0Key6 @1Key7 @0Key7```
+* In order, each of these outputs is: Time(ms), Valve Position, Pressure dP, Inhale dP, Exhale dP, AMS5915
+* The MPXV5004DPs come out as 10bit values and the scaling is ```kPa = 5*Value/1023-1```.  The AMS5915 is 14bit and the scaling is kPa = ```10*(Value-1638)/(14745-1638)```.
+* The MPXV5004DP sensors are assigned to Pressure, Inhale, and Exhale on this board, but of course you can connect them to anything you want to measure
+* The hypodermic needles can be useful for picking off pressures anywhere you have rubber tubing.
+* Be careful not to poke yourself.
+* Watch out for dynamic pressure effects when using the needles.  I have found better results by inserting the needle at an acute angle to the flow, pointing downstream, and retracting the needle such that the opening is near the sidewall of the hose.
+
+![hypodermic needle pickoff](needle_pressure_pickoff.jpg)
+* Chart > Variable Settings
+* Tick Key1 through Key7, configure as int, and choose colors > hit OK
+* Press >|< icon to connect to com port if necessary
+* Click REPEAT button, go to Chart tab  
+* both traces should now be plotting
+* Click STOP button to stop recording.
+* Chart > Export Collected Data in the format of your choice.  Note that this method captures a maximum of 10,000 samples.  It will clip the beginning of your experiment if it is longer than 10k samples.
+* You can run longer experiments within the 10k sample limit by increasing CONTROL_PERIOD, which will reduce the sampling rate.
+* If you need more than 10k samples use a different logger (or use the TO FILE button instead of REPEAT, it will output hex data that you can copy-and-paste, so be prepared to do some post-processing)
