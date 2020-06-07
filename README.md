@@ -64,8 +64,11 @@ for unofficial (proceed at your own risk!) test code with a state machine for ru
 
 
 ## GETTING DATA OUT:
+
 Outputs can be plotted and exported with Cypress PSoC Programmer (Bridge Control Panel Tool)
 
+* Comment out the Arduino Serial plotter block of code at the bottom of the code.
+* Uncomment the Cypress Bridge Control Panel block.
 * Download and install, connect serial
 * Tools > Protocol Configuration > serial 115200:8n1 > hit OK
 * In the editor tab, use this command:
