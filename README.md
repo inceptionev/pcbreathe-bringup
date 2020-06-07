@@ -33,6 +33,8 @@ Outputs can be plotted and exported with Cypress PSoC Programmer (Bridge Control
 * The hypodermic needles can be useful for picking off pressures anywhere you have rubber tubing.
 * Be careful not to poke yourself.
 * Watch out for dynamic pressure effects when using the needles.  I have found better results by inserting the needle at an acute angle to the flow, pointing downstream, and retracting the needle such that the opening is near the sidewall of the hose.
+
+![hypodermic needle pickoff](needle_pressure_pickoff.jpg)
 * Chart > Variable Settings
 * Tick Key1 through Key7, configure as int, and choose colors > hit OK
 * Press >|< icon to connect to com port if necessary
