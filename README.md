@@ -26,7 +26,7 @@ for unofficial (proceed at your own risk!) test code with a state machine for ru
 * To test i2c, connect a representative i2c device (the code is written for an [SSD1306 OLED display](https://www.amazon.com/gp/product/B07RKPSHRK)) to one or all of the i2c sensor ports.
 * Connected one or two X-NUCLEO-IHM03A1, along with stepper motors, referring to the https://github.com/RespiraWorks/pcbreathe readme if needed.  If you use more than stepper driver stacked, consult the X-NUCLEO-IHM03A1 user guide to make the required modifications.
 * Program the board.
-* Open the serial monitor and set it to 9600 baud (or whatever you've in the code below)
+* Open the serial monitor and set it to 115200 baud (or whatever you've in the code below)
 * Press reset to run the SD card test at the beginning, followed by the hardware cycling test
 * The following behaviors are expected on a functioning board:
     * The serial monitor should display valid information about the SD card.
@@ -38,9 +38,10 @@ for unofficial (proceed at your own risk!) test code with a state machine for ru
     * The serial console will stream the three pressure sensor readings of the dP sensors, the vsense, and the last chactacter received from Rpi via the UART connection - in the order of patient pressure, inhalation, exhalation, vsense, Rpi character.
     * If you have i2c oled displays hooked up, they will also display this data, along with their port number.  (note that you cannot pull out the OLED display and move it between ports while the program is live to test all the ports.  To do this you must reset the STM32 each time so that the display initializes correctly)
     * Gently press your finger over the positive port of each of the dP sensors and you should see each reading go up slightly in turn.
-    * The expected value for vsense is about 814 for 12.0V input (expect 780-850 for 11.5-12.5V)
+	* The MPXV5004DPs come out as 14bit values and the scaling is ```kPa = 5*Value/16383-1```.
+    * The expected value for vsense is about 13024 for 12.0V input (expect 12480-13600 for 11.5-12.5V)
     * If you have an Rpi connected, open up a serial terminal on the Rpi such as minicom (you may have to disable serial console and enable serial port in Rpi Config)
-    * Set the terminal to 9600 8N1, no flow control.
+    * Set the terminal to 115200 8N1, no flow control.
     * Observe that you see the same data here (3x dP readings, vsense, last char received)
     * Hold down a key on the Pi to transmit characters and see that the last char received echoes it back.
     
@@ -64,13 +65,14 @@ for unofficial (proceed at your own risk!) test code with a state machine for ru
 
 ## GETTING DATA OUT:
 Outputs can be plotted and exported with Cypress PSoC Programmer (Bridge Control Panel Tool)
+
 * Download and install, connect serial
 * Tools > Protocol Configuration > serial 115200:8n1 > hit OK
 * In the editor tab, use this command:
 
-    ```RX8 [h=43] @1Key1 @0Key1 @1Key2 @0Key2 @1Key3 @0Key3 @1Key4 @0Key4 @1Key5 @0Key5 @1Key6 @0Key6 @1Key7 @0Key7```
-* In order, each of these outputs is: Time(ms), Valve Position, Pressure dP, Inhale dP, Exhale dP, AMS5915
-* The MPXV5004DPs come out as 10bit values and the scaling is ```kPa = 5*Value/1023-1```.  The AMS5915 is 14bit and the scaling is kPa = ```10*(Value-1638)/(14745-1638)```.
+    ```RX8 [h=43] @1Key1 @0Key1 @1Key2 @0Key2 @1Key3 @0Key3 @1Key4 @0Key4 @1Key5 @0Key5 ```
+* In order, each of these outputs is: Time(ms), Pressure dP, Inhale dP, Exhale dP, Input Voltage Sense
+* The MPXV5004DPs come out as 14bit values and the scaling is ```kPa = 5*Value/16383-1```.
 * The MPXV5004DP sensors are assigned to Pressure, Inhale, and Exhale on this board, but of course you can connect them to anything you want to measure
 * The hypodermic needles can be useful for picking off pressures anywhere you have rubber tubing.
 * Be careful not to poke yourself.
@@ -78,7 +80,7 @@ Outputs can be plotted and exported with Cypress PSoC Programmer (Bridge Control
 
 ![hypodermic needle pickoff](needle_pressure_pickoff.jpg)
 * Chart > Variable Settings
-* Tick Key1 through Key7, configure as int, and choose colors > hit OK
+* Tick Key1 through Key5, configure as int, and choose colors > hit OK
 * Press >|< icon to connect to com port if necessary
 * Click REPEAT button, go to Chart tab  
 * both traces should now be plotting

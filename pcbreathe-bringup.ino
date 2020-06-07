@@ -46,7 +46,7 @@ const int chipSelect = PA15;  //SD card chip select
 //Pinch valve motion settings
 #define STARTSTROKE 7000
 #define OPENPOS 200
-#define CLOSEDPOS 6700
+#define CLOSEDPOS 6250
 
 //i2c test device definitions
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -87,8 +87,8 @@ void setup() {
   // put your setup code here, to run once:
   
   // Open serial communications and wait for port to open:
-  Serial.begin(9600);
-  Serial3.begin(9600);
+  Serial.begin(115200);
+  Serial3.begin(115200);
   //while (!Serial) {
   //  ; // wait for serial port to connect. Needed for native USB port only
   //}
@@ -107,6 +107,8 @@ void setup() {
   pinMode(MOSI, OUTPUT);
   pinMode(MISO, OUTPUT);
   pinMode(SCK, OUTPUT);
+
+  analogReadResolution(14);  //set resolution to 14bits to take advantage of the STM32 14bit ADC
 
   // Reset powerSTEP and set CS
   digitalWrite(nSTBY_nRESET_PIN, HIGH);
